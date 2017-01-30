@@ -1,0 +1,46 @@
+---
+title: "tidy_text_notes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+I am not having a good day.
+
+is a sad sentence, not a happy one, because of negation. The Stanford CoreNLP tools and the 
+sentimentr R package (currently available on Github but not CRAN) are examples of such sentiment analysis algorithms. 
+For these, we may want to tokenize text into sentences.
+
+The sentence tokenizing does seem to have a bit of trouble with UTF-8 encoded text, especially with sections of dialogue; it does much better with punctuation in ASCII. One possibility, if this is important, is to try using iconv(), with something like iconv(text, to = 'latin1') in a mutate statement before unnesting.
+
+From here:
+http://www.tfidf.com/
+
+TF = Term Frequency.  Is the normalised number of terms.  Number of times a term appears in a document divided by the total number of terms in the document.
+
+IDF = Inverse Document Frequency. Measures how important a term is. ln(Total Number of Documents in corpus / Number of Documents with term t in the Document). 
+So only the denominator changes.  With a common word like "the" it would be in all documents.  Assume that the total number of documents is 10. Then
+we would have: log(10/10, base = exp(1)) == 0
+
+But for a word like "common" well this might only be in 50% of the documents (ie 5). So we will get:
+log(10/5, base = exp(1)) = 0.69
+
+And for a word like "suplurfluous" This might be only in 1 document so we would get:
+log(10/1, base = exp(1)) == 2.3
+
+
+Consider a document containing 100 words wherein the word cat appears 3 times. The term frequency (i.e., tf) for cat is then (3 / 100) = 0.03. 
+Now, assume we have 10 million documents and the word cat appears in one thousand of these. Then, the inverse document frequency (i.e., idf) is calculated as 
+log(10,000,000 / 1,000) = 4. Thus, the Tf-idf weight is the product of these quantities: 0.03 * 4 = 0.12.
+
+log10(10000000 / 1000)
+
+
+
+

@@ -1,0 +1,7 @@
+# ignore the large data files
+aws_json.Rproj
+.RData
+.RHistory
+inputs/index_offerings.json
+inputs/index_pricing.json
+.Rproj.user
