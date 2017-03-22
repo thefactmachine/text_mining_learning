@@ -1,29 +1,42 @@
 
+rm(list = ls())
+options(stringsAsFactors = FALSE)
+options(scipen=999)
+library(dplyr)
+library(tidytext)
 
-text <- c("Because I could not stop for Death -",
+
+vct_text <- c("Because I could not stop for Death -",
           "He kindly stopped for me -",
           "The Carriage held but just Ourselves -",
           "and Immortality")
-)
-text
 
-library(dplyr)
-df_text <- dplyr::data_frame(line = 1:length(text),
-                             text = text)
+
+
+df_text <- dplyr::data_frame(line = 1:length(vct_text),
+                             text = vct_text)
 
 df_text
 
-library(tidytext)
+
 # creates a two column data.frame.
 # strips out punctuation and converts the words to lower_case
 # number of rows = number of distinct words
 # the lower case conversion can be turned off: to_lower = FALSE
-df_text %>% tidytext::unnest_tokens(word, text)
+
+# arguments: input_data_frame, name of output column, 
+# name of input data frame column to process.
+tidytext::unnest_tokens(df_text, word, text)
 
 
+# ==================================================
+
+
+rm(list = ls())
 library(janeaustenr)
 library(dplyr)
 library(stringr)
+library(ggplot2)
 
 
 
@@ -34,7 +47,7 @@ head(df_austen_books, 15)
 
 # the input to str_detect is a character vector
 # regex square brackets means any character
-# /d is short for 0-9
+# \d is short for 0-9
 # string_detect returns a boolean vector
 # text here is the column name
 original_books <- df_austen_books %>%
@@ -43,20 +56,59 @@ original_books <- df_austen_books %>%
          chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
                                                  ignore_case = TRUE)))) %>% ungroup()
 
+# ===================
+
+# explanation of the above code:
+# when str_detect == TRUE then cumsum increments
+# grouping by book means that cumsum resets to zero with each 
+# change in book
+
+test_book <- c("book1", "book1", "book1", 
+               "book2", "book2", "book2", "book2", 
+               "book3", "book3", "book3")
+
+test_text <- c("dummy text",  "chapter 1", "chapter 2", 
+               "dummy text", "chapter v", "chapter c", "dummy text", 
+               "dummy text", "chapter 3", "dummy text")
+
+df_test <- data.frame(text = test_text, book = test_book)
+
+
+df_test_result <- df_test %>%
+  group_by(book) %>%
+  mutate(linenumber = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+                                                 ignore_case = TRUE)))) %>% ungroup()
+
+
+vct_cum_sum <- cumsum(str_detect(df_test$text, regex("^chapter [\\divxlc]", ignore_case = TRUE))) 
+vct_str_detect <- str_detect(df_test$text, regex("^chapter [\\divxlc]", ignore_case = TRUE))
+df_explain <- data.frame(cs = vct_cum_sum, sd = vct_str_detect)
+df_test_result <- cbind(df_test_result, df_explain)
+
+# ===================
+
 # this is equal to the number of lines in the books
 nrow(original_books) == 73422
+
+
 
 # this is now 725,054
 # this uses the tokenizers package. And uses the word token
 # other options are characters, n-grams, sentences, lines, regex...
 # "text" here is a column name of original_books
+# args: data_frame, output_column, input_column
 df_tidy_books <- original_books %>% unnest_tokens(word, text)
+df_tidy_books
+
 
 # stop_words is a 2 column data_frame with the columns: "word" and "lexicon"
+# data() loads specified data sets
 data("stop_words")
 
-# nrow(217609)
-tidy_books_sans_sw <- tidy_books %>% anti_join(stop_words, by =  c("word" = "word"))
+# nrow(217,609)
+tidy_books_sans_sw <- df_tidy_books %>% anti_join(stop_words, by =  c("word" = "word"))
+
 
 # limit output to the first 20 rows. 
 df_graph_disp <- tidy_books_sans_sw %>% 
@@ -65,12 +117,23 @@ df_graph_disp <- tidy_books_sans_sw %>%
                   arrange(desc(count)) %>%
                   filter(row_number() < 20 )
 
-library(ggplot2)
-# need to play around with the factor order to 
+# factor order determines order of the bars
+df_graph_disp$word <- factor(df_graph_disp$word, levels = df_graph_disp$word) 
+
+
+
+
 # change order of the bars.
 x <- ggplot(df_graph_disp, aes(word, count))
 x <- x + geom_bar(stat = "identity")
 x
+
+
+
+
+
+# ===================
+
 
 #================================
 # 2.3 gutenbergr package is missing
@@ -83,6 +146,7 @@ x
 # We calculate the word frequencies for
 # HG Well and Jane Austin books
 
+rm(list = ls())
 library(gutenbergr)
 library(dplyr)
 library(stringr)
@@ -99,6 +163,7 @@ tidy_hgwells %>%
 
 # now we get some works from the Bronte Sisters
 bronte <- gutenberg_download(c(1260, 768, 969, 9182, 766))
+
 tidy_bronte <- bronte %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)
@@ -118,6 +183,7 @@ tidy_both <- bind_rows(tidy_bronte, tidy_hgwells)
 vct_word_test <- c("mark", "allan", "_hatcher", "at", "thefactmachine_", "yuk_ari")
 vct_word_test
 # here we are excluding all the pieces that are NOT part of the pattern
+# "+" is one or more times
 str_extract(vct_word_test, "[a-z]+")
 
 # We use str_extract here because the UTF-8 encoded texts from Project Gutenberg 
@@ -127,13 +193,16 @@ str_extract(vct_word_test, "[a-z]+")
 
 tidy_both <- tidy_both %>% mutate(word = str_extract(word, "[a-z]+"))
 
-# see here that the count is labelled as "n"
+# see here that the count is labelled as "n"..extra column "n" is added
 tidy_both <- tidy_both %>% count(author, word)
+
 head(tidy_both)
 
 # rename "n" to become "other"
 tidy_both <- tidy_both %>% rename(other = n)
 head(tidy_both)
+
+# ====================
 
 # Assume the script above has run...and we have the following to work with
 head(tidy_books_sans_sw)
@@ -153,7 +222,7 @@ tidy_books_sans_sw <- tidy_books_sans_sw %>% ungroup()
 # columns are "author ("Bronte Sisters" and "H.G. Wells"), word, and "other" (count)
 tidy_both <- tidy_both %>% ungroup()
 
-# club both together on common words
+# club both together on words in common
 frequency <- inner_join(tidy_books_sans_sw, tidy_both, by = c("word" = "word"))
 
 frequency <-  frequency %>% mutate(other = other / sum(other), Austen = Austen / sum(Austen))
@@ -208,8 +277,3 @@ tidy_both_orig <- bind_rows(
   mutate(other = other / sum(other),
          Austen = Austen / sum(Austen)) %>%
   ungroup()
-
-
-
-
-
